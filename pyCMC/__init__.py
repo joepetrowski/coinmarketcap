@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 Started on 19 June 2019
-@author: joepetrowski
+author: joepetrowski
+author_email: joepetrowski@protonmail.com
+license: Apache v2.0
 """
 
 from requests import Request, Session
@@ -10,6 +12,7 @@ import json
 
 class CMC(object):
 
+	# See: https://coinmarketcap.com/api/documentation/v1/
 	def __init__(self, cmc_key):
 		self.root_url = 'https://pro-api.coinmarketcap.com/v1/'
 		self.headers = {
@@ -100,7 +103,8 @@ class CMC(object):
 
 		return data
 
-	# Returns listings for currencies.
+	# Returns listings (total supply, max supply, price, percent change, the info you would see
+	# on coinmarketcap.com) for currencies.
 	#
 	# Prioritizes `convert` over `convert_id`.
 	#
@@ -163,9 +167,61 @@ class CMC(object):
 		
 		return data
 	
-	# Placeholder: Historical listings
+	# Same as `listings()` but for a historical date.
 	#
 	# Requires paid plan.
+	#
+	# `date` is a string and must be Unix or ISO 8601 format (e.g. '2018-02-24'). Only the _date_,
+	# and not the _time_, will be considered.
+	def historical_listings(self, date, start=1, limit=100, convert=None, convert_id=None, sort=None, sort_dir=None, cryptocurrencytype=None):
+		
+		assert( type(date) == str )
+
+		if start < 1:
+			start = 1
+
+		if limit < 1:
+			limit = 1
+		elif limit > 5000:
+			limit = 5000
+
+		url = self.root_url + 'cryptocurrency/listings/latest'
+
+		parameters = {
+			'date' : date,
+			'start' : str(int(start)),
+			'limit' : str(int(limit)),
+		}
+
+		if convert:
+			parameters['convert'] = convert.replace(' ', '')
+		elif convert_id:
+			parameters['convert_id'] = convert_id.replace(' ', '')
+		
+		valid_sort = ['name', 'symbol', 'date_added', 'market_cap', \
+			'market_cap_strict','price', 'circulating_supply', 'total_supply', \
+			'max_supply','num_market_pairs', 'volume_24h', 'percent_change_1h', \
+			'percent_change_24h', 'percent_change_7d']
+		if sort:
+			if sort not in valid_sort:
+				sort = 'market_cap'
+			parameters['sort'] = sort
+		
+		valid_sort_dir = ['asc', 'desc']
+		if sort_dir:
+			if sort_dir not in valid_sort_dir:
+				sort_dir = 'desc'
+			parameters['sort_dir'] = sort_dir
+		
+		valid_types = ['all', 'coins', 'tokens']
+		if cryptocurrencytype:
+			if cryptocurrencytype not in valid_types:
+				cryptocurrencytype = 'all'
+			parameters['cryptocurrencytype'] = cryptocurrencytype
+
+		data = self.__call__(url, parameters)
+		
+		return data
 
 	# Get the latest market quote for 1 or more cryptocurrencies. Use the 'convert'
 	# option to return market values in multiple fiat and cryptocurrency conversions
