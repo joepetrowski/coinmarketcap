@@ -27,7 +27,7 @@ meta_data = cmc.metadata(slug='bitcoin,ethereum,litecoin')
 test_results(meta_data, 'Metadata')
 
 # Listings
-listings = cmc.listings(start=1, limit=5, convert='USD', convert_id=None, sort='market_cap')
+listings = cmc.listings(start=1, limit=5, convert='EUR', convert_id=None, sort='market_cap')
 test_results(listings, 'Listings')
 
 # Quotes
