@@ -67,6 +67,20 @@ class CMC(object):
 
 		return parameters
 	
+	def _intervals(self, interval, parameters={}):
+
+		valid_intervals = [ \
+			'yearly', 'monthly', 'weekly', 'daily', 'hourly', \
+			'5m', '10m', '15m', '30m', '45m', \
+			'1h', '2h', '3h', '6h', '12h', '24h', \
+			'1d', '2d', '3d', '7d', '14d', '15d', '30d', '60d', '90d', '365d'
+		]
+
+		if interval in valid_intervals:
+			parameters['interval'] = interval
+
+		return parameters
+	
 	# Returns a current list of all active cryptocurrencies supported by the
 	# platform including a unique ID for each cryptocurrency.
 	#
@@ -249,9 +263,73 @@ class CMC(object):
 		
 		return data
 
-	# Placeholder: Historical quotes
+	# Historical quotes. A historic quote for every 'interval' period between your 'time_start'
+	# and 'time_end' will be returned.
 	#
 	# Requires paid plan.
+	#
+	# Inputs
+	# coinId    	string, coin ID(s). See `map()`.
+	# symbol        string, coin symbmol(s) (e.g. 'BTC,ETH').
+	# time_start    string, Unix or ISO 8601 timestamp for when to start collecting data.
+	#				Optional, if not provided, will work backwards from `time_end`.
+	# time_end      string, Unix or ISO 8601 timestamp for when to end collecting data.
+	#				Optional, if not provided, will work forwards from `time_start`.
+	#				If neither are provided, `time_end` will default to the current time.
+	# count			int, the number of interval periods for which to collect data.
+	# interval		string, the time interval between quotes. See docs for valid values:
+	#				https://coinmarketcap.com/api/documentation/v1/#operation/getV1CryptocurrencyQuotesHistorical
+	# convert		string, symbol(s) of currency to use as quote.
+	# convert_id    string, ID(s) of currency to use as quote. See `map()`.
+	#
+	# WARNING: Completely untested, I don't have a paid plan.
+	def historical_quotes(
+		self,
+		coinId=None,
+		symbol=None,
+		time_start=None,
+		time_end=None,
+		count=10,
+		interval=None,
+		convert=None,
+		convert_id=None
+	):
+
+		if not coinId and not symbol:
+			err = { 'error' : 'Coin ID or symbol required.' }
+			return err
+		
+		if coinId:
+			parameters = { 'id' : coinId.replace(' ', '') }
+		elif symbol:
+			parameters = { 'symbol' : symbol.replace(' ', '') }
+		
+		if time_start:
+			assert( type(time_start) == str )
+			parameters['time_start'] = time_start
+		
+		if time_end:
+			assert( type(time_end) == str )
+			parameters['time_end'] = time_end
+		
+		if count < 1:
+			count = 1
+		elif count > 10_000:
+			count = 10_000
+		
+		parameters['count'] = str(int(count))
+
+		if interval:
+			assert( type(interval) == str )
+			parameters = self._intervals(interval, parameters)
+
+		parameters = self._convertparams(convert, convert_id, parameters)
+		
+		url = self.root_url + 'cryptocurrency/quotes/historical'
+
+		data = self.__call__(url, parameters)
+
+		return data
 
 	# Placeholder: Market pairs
 	#
