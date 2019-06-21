@@ -33,9 +33,46 @@ class CMC(object):
 			}
 		
 		return data
+
+	def _convertparams(self, convert=None, convert_id=None, parameters={}):
+
+		if convert:
+			parameters['convert'] = convert.replace(' ', '')
+		elif convert_id:
+			parameters['convert_id'] = convert_id.replace(' ', '')
+
+		return parameters
 	
-	# Returns a current list of all active cryptocurrencies  supported by the
-	# platform including a unique id for each cryptocurrency.
+	def _sort_params(self, sort=None, sort_dir=None, cryptocurrencytype=None, parameters={}):
+
+		valid_sort = ['name', 'symbol', 'date_added', 'market_cap', 'market_cap_strict', \
+			'price', 'circulating_supply', 'total_supply', 'max_supply','num_market_pairs', \
+			'volume_24h', 'percent_change_1h', 'percent_change_24h', 'percent_change_7d']
+		if sort:
+			if sort not in valid_sort:
+				sort = 'market_cap'
+			parameters['sort'] = sort
+		
+		valid_sort_dir = ['asc', 'desc']
+		if sort_dir:
+			if sort_dir not in valid_sort_dir:
+				sort_dir = 'desc'
+			parameters['sort_dir'] = sort_dir
+		
+		valid_types = ['all', 'coins', 'tokens']
+		if cryptocurrencytype:
+			if cryptocurrencytype not in valid_types:
+				cryptocurrencytype = 'all'
+			parameters['cryptocurrencytype'] = cryptocurrencytype
+
+		return parameters
+	
+	# Returns a current list of all active cryptocurrencies supported by the
+	# platform including a unique ID for each cryptocurrency.
+	#
+	# It is highly recommended to use this function and map your coins of interest
+	# to their ID in all other function calls. Not all symbols are unique, so using
+	# IDs will reduce the risk of error.
 	#
 	# Inputs
 	# status    string, can be 'active' or 'inactive'.
@@ -59,15 +96,14 @@ class CMC(object):
 		url = self.root_url + 'cryptocurrency/map'
 
 		parameters = {
-			'status' : status,
+			'listing_status' : status,
 			'start' : str(int(start)),
 			'limit' : str(int(limit)),
 		}
 
+		# `symbol` overrides all other parameters
 		if symbol:
-			parameters = {
-				'symbol' : symbol.replace(' ', ''),
-			}
+			parameters = { 'symbol' : symbol.replace(' ', '') }
 		
 		data = self.__call__(url, parameters)
 		
@@ -78,7 +114,7 @@ class CMC(object):
 	# to a cryptocurrency's technical documentation.
 	#
 	# Can only use one of the inputs, `coinid`, `slug`, or `symbol`.
-	# Prioritizes `coinid` over `slug` over `symbol`.
+	# Prioritizes `coinId` over `slug` over `symbol`.
 	#
 	# Inputs
 	# coinId    string, coin ID. See `map()`.
@@ -137,31 +173,9 @@ class CMC(object):
 			'limit' : str(int(limit)),
 		}
 
-		if convert:
-			parameters['convert'] = convert.replace(' ', '')
-		elif convert_id:
-			parameters['convert_id'] = convert_id.replace(' ', '')
+		parameters = self._convertparams(convert, convert_id, parameters)
 		
-		valid_sort = ['name', 'symbol', 'date_added', 'market_cap', \
-			'market_cap_strict','price', 'circulating_supply', 'total_supply', \
-			'max_supply','num_market_pairs', 'volume_24h', 'percent_change_1h', \
-			'percent_change_24h', 'percent_change_7d']
-		if sort:
-			if sort not in valid_sort:
-				sort = 'market_cap'
-			parameters['sort'] = sort
-		
-		valid_sort_dir = ['asc', 'desc']
-		if sort_dir:
-			if sort_dir not in valid_sort_dir:
-				sort_dir = 'desc'
-			parameters['sort_dir'] = sort_dir
-		
-		valid_types = ['all', 'coins', 'tokens']
-		if cryptocurrencytype:
-			if cryptocurrencytype not in valid_types:
-				cryptocurrencytype = 'all'
-			parameters['cryptocurrencytype'] = cryptocurrencytype
+		parameters = self._sort_params(sort, sort_dir, cryptocurrencytype, parameters)
 
 		data = self.__call__(url, parameters)
 		
@@ -193,31 +207,9 @@ class CMC(object):
 			'limit' : str(int(limit)),
 		}
 
-		if convert:
-			parameters['convert'] = convert.replace(' ', '')
-		elif convert_id:
-			parameters['convert_id'] = convert_id.replace(' ', '')
+		parameters = self._convertparams(convert, convert_id, parameters)
 		
-		valid_sort = ['name', 'symbol', 'date_added', 'market_cap', \
-			'market_cap_strict','price', 'circulating_supply', 'total_supply', \
-			'max_supply','num_market_pairs', 'volume_24h', 'percent_change_1h', \
-			'percent_change_24h', 'percent_change_7d']
-		if sort:
-			if sort not in valid_sort:
-				sort = 'market_cap'
-			parameters['sort'] = sort
-		
-		valid_sort_dir = ['asc', 'desc']
-		if sort_dir:
-			if sort_dir not in valid_sort_dir:
-				sort_dir = 'desc'
-			parameters['sort_dir'] = sort_dir
-		
-		valid_types = ['all', 'coins', 'tokens']
-		if cryptocurrencytype:
-			if cryptocurrencytype not in valid_types:
-				cryptocurrencytype = 'all'
-			parameters['cryptocurrencytype'] = cryptocurrencytype
+		parameters = self._sort_params(sort, sort_dir, cryptocurrencytype, parameters)
 
 		data = self.__call__(url, parameters)
 		
@@ -227,7 +219,7 @@ class CMC(object):
 	# option to return market values in multiple fiat and cryptocurrency conversions
 	# in the same call.
 	#
-	# Prioritizes `coinid` over `slug` over `symbol`.
+	# Prioritizes `coinId` over `slug` over `symbol`.
 	# Prioritizes `convert` over `convert_id`.
 	#
 	# Inputs
@@ -251,10 +243,7 @@ class CMC(object):
 		elif symbol:
 			parameters = { 'symbol' : symbol.replace(' ', '') }
 		
-		if convert:
-			parameters['convert'] = convert.replace(' ', '')
-		elif convert_id:
-			parameters['convert_id'] = convert_id.replace(' ', '')
+		parameters = self._convertparams(convert, convert_id, parameters)
 		
 		data = self.__call__(url, parameters)
 		
@@ -293,12 +282,8 @@ class CMC(object):
 
 		url = self.root_url + 'global-metrics/quotes/latest'
 
-		if convert:
-			parameters = { 'convert' : convert.replace(' ', '') }
-		elif convert_id:
-			parameters = { 'convert_id' : convert_id.replace(' ', '') }
-		else:
-			parameters = {}
+		parameters = {}
+		parameters = self._convertparams(convert, convert_id, parameters)
 		
 		data = self.__call__(url, parameters)
 		
@@ -342,13 +327,11 @@ class CMC(object):
 			err = { 'error' : 'Must specify a currency to convert from.' }
 			return err
 		
-		if convert:
-			parameters['convert'] = convert.replace(' ', '')
-		elif convert_id:
-			parameters['convert_id'] = convert_id.replace(' ', '')
-		else:
+		if not convert and not convert_id:
 			err = { 'error' : 'Must specify a currency to convert to.' }
 			return err
+		
+		parameters = self._convertparams(convert, convert_id, parameters)
 
 		if time:
 			parameters['time'] = time
