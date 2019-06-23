@@ -331,9 +331,63 @@ class CMC(object):
 
 		return data
 
-	# Placeholder: Market pairs
+	# Market pairs: Lists all active market pairs that CoinMarketCap tracks for a given cryptocurrency
+	# or fiat currency. The latest price and volume information is returned for each market. Use the
+	# "convert" option to return market values in multiple fiat and cryptocurrency conversions in the
+	# same call.
 	#
 	# Requires paid plan.
+	#
+	# Inputs
+	# coinID		string, a cryptocurrency or fiat currency to get market pairs for. Only 1. (e.g. '1')
+	# slug			string, a cryptocurrency or fiat currency to get market pairs for. Only 1. (e.g. 'bitcoin')
+	# symbol		string, a cryptocurrency or fiat currency to get market pairs for. Only 1. (e.g. 'BTC')
+	# start			int, optionally set the start to a different index in the pagination.
+	# limit			int, optionally specify the number of results to return. 
+	# convert		string, optionally convert the market pairs to a quote for up to 120 currencies. (e.g. 'BTC,USD')
+	# convert_id    string optionally convert the market pairs to a quote for up to 120 currencies. (e.g. '1,2781')
+	#
+	# WARNING: Completely untested, I don't have a paid plan.
+	def market_pairs(self, coinId=None, slug=None, symbol=None, start=1, limit=100, convert=None, convert_id=None):
+
+		url = self.root_url + 'cryptocurrency/market-pairs/latest'
+
+		if not coinId and not slug and not symbol:
+			err = { 'error' : 'No parameters provided.' }
+			return err
+		
+		if not isinstance(start, int):
+			err = { 'error' : 'Start must be an integer.' }
+			return err
+
+		if not isinstance(limit, int):
+			err = { 'error' : 'Limit must be an integer.' }
+			return err
+		
+		if coinId:
+			parameters = { 'id' : coinId.replace(' ', '') }
+		elif slug:
+			parameters = { 'slug' : slug.replace(' ', '') }
+		elif symbol:
+			parameters = { 'symbol' : symbol.replace(' ', '') }
+		
+		if start < 1:
+			start = 1
+		
+		parameters['start'] = str(start)
+		
+		if limit < 1:
+			limit = 1
+		elif limit > 5000:
+			limit = 5000
+		
+		parameters['limit'] = str(limit)
+
+		parameters = self._convertparams(convert, convert_id, parameters)
+
+		data = self.__call__(url, parameters)
+
+		return data
 
 	# Placeholder: OHLCV
 	#
