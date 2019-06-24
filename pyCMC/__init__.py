@@ -360,12 +360,9 @@ class CMC(object):
 			err = { 'error' : 'Limit must be an integer.' }
 			return err
 		
-		if coinId:
-			parameters = { 'id' : coinId.replace(' ', '') }
-		elif slug:
-			parameters = { 'slug' : slug.replace(' ', '') }
-		elif symbol:
-			parameters = { 'symbol' : symbol.replace(' ', '') }
+		parameters = self._id_symbol(coinId, slug, symbol, {}, True)
+		if 'error' in parameters:
+			return parameters
 		
 		if start < 1:
 			start = 1
