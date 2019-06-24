@@ -81,6 +81,21 @@ class CMC(object):
 
 		return parameters
 	
+	def _id_symbol(self, coinId=None, slug=None, symbol=None, parameters={}, required=True):
+
+		if required and not coinId and not slug and not symbol:
+			err = { 'error' : 'No parameters provided.' }
+			return err
+		
+		if coinId:
+			parameters['id'] = coinId.replace(' ', '')
+		elif slug:
+			parameters['slug'] = slug.replace(' ', '')
+		elif symbol:
+			parameters['symbol'] = symbol.replace(' ', '')
+		
+		return parameters
+	
 	# Returns a current list of all active cryptocurrencies supported by the
 	# platform including a unique ID for each cryptocurrency.
 	#
@@ -135,19 +150,12 @@ class CMC(object):
 	# slug      string, coin names (e.g. 'bitcoin,ethereum').
 	# symbol    string, coin symbmols (e.g. 'BTC,ETH').
 	def metadata(self, coinId=None, slug=None, symbol=None):
-
-		if not coinId and not slug and not symbol:
-			err = { 'error' : 'No parameters provided.' }
-			return err
 		
 		url = self.root_url + 'cryptocurrency/info'
 
-		if coinId:
-			parameters = { 'id' : coinId.replace(' ', '') }
-		elif slug:
-			parameters = { 'slug' : slug.replace(' ', '') }
-		elif symbol:
-			parameters = { 'symbol' : symbol.replace(' ', '') }
+		parameters = self._id_symbol(coinId, slug, symbol, {}, True)
+		if 'error' in parameters:
+			return parameters
 
 		data = self.__call__(url, parameters)
 
@@ -244,18 +252,11 @@ class CMC(object):
 	# convert_id    string, ID(s) of currency to use as quote. See `map()`.
 	def quotes(self, coinId=None, slug=None, symbol=None, convert=None, convert_id=None):
 
-		if not coinId and not slug and not symbol:
-			err = { 'error' : 'No parameters provided.' }
-			return err
-
 		url = self.root_url + 'cryptocurrency/quotes/latest'
 
-		if coinId:
-			parameters = { 'id' : coinId.replace(' ', '') }
-		elif slug:
-			parameters = { 'slug' : slug.replace(' ', '') }
-		elif symbol:
-			parameters = { 'symbol' : symbol.replace(' ', '') }
+		parameters = self._id_symbol(coinId, slug, symbol, {}, True)
+		if 'error' in parameters:
+			return parameters
 		
 		parameters = self._convertparams(convert, convert_id, parameters)
 		
@@ -295,14 +296,9 @@ class CMC(object):
 		convert_id=None
 	):
 
-		if not coinId and not symbol:
-			err = { 'error' : 'Coin ID or symbol required.' }
-			return err
-		
-		if coinId:
-			parameters = { 'id' : coinId.replace(' ', '') }
-		elif symbol:
-			parameters = { 'symbol' : symbol.replace(' ', '') }
+		parameters = self._id_symbol(coinId, None, symbol, {}, True)
+		if 'error' in parameters:
+			return parameters
 		
 		if time_start:
 			assert( type(time_start) == str )
@@ -440,6 +436,15 @@ class CMC(object):
 	# time          string, optional, Unix or ISO 8601 timestamp (e.g. '2018-02-24'). Paid only.
 	def convert_price(self, amount, coinId=None, symbol=None, convert=None, convert_id=None, time=None):
 
+		url = self.root_url + 'tools/price-conversion'
+
+		parameters = self._id_symbol(coinId, None, symbol, {}, True)
+		if 'error' in parameters:
+			return parameters
+
+		if not isinstance(amount, (int, float)):
+			err = { 'error' : 'Amount must be int or float.' }
+			return err
 		if amount < 1e-8:
 			err = { 'error' : 'Amount must be greater than 1e-8.' }
 			return err
@@ -447,18 +452,8 @@ class CMC(object):
 			err = { 'error' : 'Amount must be less than 1e9.' }
 			return err
 		
-		url = self.root_url + 'tools/price-conversion'
-
-		parameters = { 'amount' : str(amount) }
-
-		if coinId:
-			parameters['id'] = coinId.replace(' ', '')
-		elif symbol:
-			parameters['symbol'] = symbol.replace(' ', '')
-		else:
-			err = { 'error' : 'Must specify a currency to convert from.' }
-			return err
-		
+		parameters['amount'] = str(amount)
+				
 		if not convert and not convert_id:
 			err = { 'error' : 'Must specify a currency to convert to.' }
 			return err
