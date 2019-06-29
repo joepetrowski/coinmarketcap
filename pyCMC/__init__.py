@@ -341,7 +341,7 @@ class CMC(object):
 	# start			int, optionally set the start to a different index in the pagination.
 	# limit			int, optionally specify the number of results to return. 
 	# convert		string, optionally convert the market pairs to a quote for up to 120 currencies. (e.g. 'BTC,USD')
-	# convert_id    string optionally convert the market pairs to a quote for up to 120 currencies. (e.g. '1,2781')
+	# convert_id    string, optionally convert the market pairs to a quote for up to 120 currencies. (e.g. '1,2781')
 	#
 	# WARNING: Completely untested, I don't have a paid plan.
 	def market_pairs(self, coinId=None, slug=None, symbol=None, start=1, limit=100, convert=None, convert_id=None):
@@ -382,9 +382,27 @@ class CMC(object):
 
 		return data
 
-	# Placeholder: OHLCV
+	# Return the latest OHLCV (Open, High, Low, Close, Volume) market values for one or more
+	# cryptocurrencies for the current UTC day. Since the current UTC day is still active these
+	# values are updated frequently. 
 	#
-	# Requires paid plan.
+	# Inputs
+	# coinID		string, one or more coin IDs for which to get data. See `map()`. (e.g. '1,4,5')
+	# symbol		string, one or more symbols for which to get data. (e.g. 'BTC,ETH,LTC')
+	# convert		string, optionally convert the data to a quote for up to 120 currencies. (e.g. 'BTC,USD')
+	# convert_id    string, optionally convert the data to a quote for up to 120 currencies. (e.g. '1,2781')
+	#
+	# WARNING: Completely untested, I don't have a paid plan.
+	def ohlcv_latest(self, coinId=None, symbol=None, convert=None, convert_id=None):
+
+		url = self.root_url + 'cryptocurrency/ohlcv/latest'
+
+		parameters = self._id_symbol(coinId, None, symbol, {}, True)
+		parameters = self._convertparams(convert, convert_id, parameters)
+
+		data = self.__call__(url, parameters)
+
+		return data
 
 	# Placeholder: Historical OHLCV
 	#
