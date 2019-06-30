@@ -31,7 +31,7 @@ class CMC(object):
 			data = {
 				'error' : e,
 			}
-		
+
 		return data
 
 	def _convertparams(self, convert=None, convert_id=None, parameters={}):
@@ -42,7 +42,7 @@ class CMC(object):
 			parameters['convert_id'] = convert_id.replace(' ', '')
 
 		return parameters
-	
+
 	def _sort_params(self, sort=None, sort_dir=None, cryptocurrencytype=None, parameters={}):
 
 		valid_sort = ['name', 'symbol', 'date_added', 'market_cap', 'market_cap_strict', \
@@ -52,13 +52,13 @@ class CMC(object):
 			if sort not in valid_sort:
 				sort = 'market_cap'
 			parameters['sort'] = sort
-		
+
 		valid_sort_dir = ['asc', 'desc']
 		if sort_dir:
 			if sort_dir not in valid_sort_dir:
 				sort_dir = 'desc'
 			parameters['sort_dir'] = sort_dir
-		
+
 		valid_types = ['all', 'coins', 'tokens']
 		if cryptocurrencytype:
 			if cryptocurrencytype not in valid_types:
@@ -66,36 +66,41 @@ class CMC(object):
 			parameters['cryptocurrencytype'] = cryptocurrencytype
 
 		return parameters
-	
-	def _intervals(self, interval, parameters={}):
+
+	def _intervals(self, interval, parameters={}, full=True):
 
 		valid_intervals = [ \
 			'yearly', 'monthly', 'weekly', 'daily', 'hourly', \
-			'5m', '10m', '15m', '30m', '45m', \
 			'1h', '2h', '3h', '6h', '12h', '24h', \
 			'1d', '2d', '3d', '7d', '14d', '15d', '30d', '60d', '90d', '365d'
 		]
 
-		if interval in valid_intervals:
-			parameters['interval'] = interval
+		extra = [ '5m', '10m', '15m', '30m', '45m' ]
+
+		if full:
+			if interval in valid_intervals or interval in extra:
+				parameters['interval'] = interval
+		else:
+			if interval in valid_intervals:
+				parameters['interval'] = interval
 
 		return parameters
-	
+
 	def _id_symbol(self, coinId=None, slug=None, symbol=None, parameters={}, required=True):
 
 		if required and not coinId and not slug and not symbol:
 			err = { 'error' : 'No parameters provided.' }
 			return err
-		
+
 		if coinId:
 			parameters['id'] = coinId.replace(' ', '')
 		elif slug:
 			parameters['slug'] = slug.replace(' ', '')
 		elif symbol:
 			parameters['symbol'] = symbol.replace(' ', '')
-		
+
 		return parameters
-	
+
 	# Returns a current list of all active cryptocurrencies supported by the
 	# platform including a unique ID for each cryptocurrency.
 	#
@@ -121,7 +126,7 @@ class CMC(object):
 			limit = 1
 		elif limit > 5000:
 			limit = 5000
-		
+
 		url = self.root_url + 'cryptocurrency/map'
 
 		parameters = {
@@ -133,9 +138,9 @@ class CMC(object):
 		# `symbol` overrides all other parameters
 		if symbol:
 			parameters = { 'symbol' : symbol.replace(' ', '') }
-		
+
 		data = self.__call__(url, parameters)
-		
+
 		return data
 
 	# Returns all static metadata available for one or more cryptocurrencies. This information
@@ -150,7 +155,7 @@ class CMC(object):
 	# slug      string, coin names (e.g. 'bitcoin,ethereum').
 	# symbol    string, coin symbmols (e.g. 'BTC,ETH').
 	def metadata(self, coinId=None, slug=None, symbol=None):
-		
+
 		url = self.root_url + 'cryptocurrency/info'
 
 		parameters = self._id_symbol(coinId, slug, symbol, {}, True)
@@ -179,7 +184,7 @@ class CMC(object):
 	# cryptocurrencytype    string, types to return, can be 'all', 'coins', or 'tokens'.
 	#                       If your type is not valid, it will return all.
 	def listings(self, start=1, limit=100, convert=None, convert_id=None, sort=None, sort_dir=None, cryptocurrencytype=None):
-		
+
 		if start < 1:
 			start = 1
 
@@ -196,13 +201,13 @@ class CMC(object):
 		}
 
 		parameters = self._convertparams(convert, convert_id, parameters)
-		
+
 		parameters = self._sort_params(sort, sort_dir, cryptocurrencytype, parameters)
 
 		data = self.__call__(url, parameters)
-		
+
 		return data
-	
+
 	# Same as `listings()` but for a historical date.
 	#
 	# Requires paid plan.
@@ -210,7 +215,7 @@ class CMC(object):
 	# `date` is a string and must be Unix or ISO 8601 format (e.g. '2018-02-24'). Only the _date_,
 	# and not the _time_, will be considered.
 	def historical_listings(self, date, start=1, limit=100, convert=None, convert_id=None, sort=None, sort_dir=None, cryptocurrencytype=None):
-		
+
 		assert( type(date) == str )
 
 		if start < 1:
@@ -230,11 +235,11 @@ class CMC(object):
 		}
 
 		parameters = self._convertparams(convert, convert_id, parameters)
-		
+
 		parameters = self._sort_params(sort, sort_dir, cryptocurrencytype, parameters)
 
 		data = self.__call__(url, parameters)
-		
+
 		return data
 
 	# Get the latest market quote for 1 or more cryptocurrencies. Use the 'convert'
@@ -257,11 +262,11 @@ class CMC(object):
 		parameters = self._id_symbol(coinId, slug, symbol, {}, True)
 		if 'error' in parameters:
 			return parameters
-		
+
 		parameters = self._convertparams(convert, convert_id, parameters)
-		
+
 		data = self.__call__(url, parameters)
-		
+
 		return data
 
 	# Historical quotes. A historic quote for every 'interval' period between your 'time_start'
@@ -299,28 +304,28 @@ class CMC(object):
 		parameters = self._id_symbol(coinId, None, symbol, {}, True)
 		if 'error' in parameters:
 			return parameters
-		
+
 		if time_start:
 			assert( type(time_start) == str )
 			parameters['time_start'] = time_start
-		
+
 		if time_end:
 			assert( type(time_end) == str )
 			parameters['time_end'] = time_end
-		
+
 		if count < 1:
 			count = 1
 		elif count > 10_000:
 			count = 10_000
-		
+
 		parameters['count'] = str(int(count))
 
 		if interval:
 			assert( type(interval) == str )
-			parameters = self._intervals(interval, parameters)
+			parameters = self._intervals(interval, parameters, True)
 
 		parameters = self._convertparams(convert, convert_id, parameters)
-		
+
 		url = self.root_url + 'cryptocurrency/quotes/historical'
 
 		data = self.__call__(url, parameters)
@@ -339,7 +344,7 @@ class CMC(object):
 	# slug			string, a cryptocurrency or fiat currency to get market pairs for. Only 1. (e.g. 'bitcoin')
 	# symbol		string, a cryptocurrency or fiat currency to get market pairs for. Only 1. (e.g. 'BTC')
 	# start			int, optionally set the start to a different index in the pagination.
-	# limit			int, optionally specify the number of results to return. 
+	# limit			int, optionally specify the number of results to return.
 	# convert		string, optionally convert the market pairs to a quote for up to 120 currencies. (e.g. 'BTC,USD')
 	# convert_id    string, optionally convert the market pairs to a quote for up to 120 currencies. (e.g. '1,2781')
 	#
@@ -351,7 +356,7 @@ class CMC(object):
 		if not coinId and not slug and not symbol:
 			err = { 'error' : 'No parameters provided.' }
 			return err
-		
+
 		if not isinstance(start, int):
 			err = { 'error' : 'Start must be an integer.' }
 			return err
@@ -359,21 +364,21 @@ class CMC(object):
 		if not isinstance(limit, int):
 			err = { 'error' : 'Limit must be an integer.' }
 			return err
-		
+
 		parameters = self._id_symbol(coinId, slug, symbol, {}, True)
 		if 'error' in parameters:
 			return parameters
-		
+
 		if start < 1:
 			start = 1
-		
+
 		parameters['start'] = str(start)
-		
+
 		if limit < 1:
 			limit = 1
 		elif limit > 5000:
 			limit = 5000
-		
+
 		parameters['limit'] = str(limit)
 
 		parameters = self._convertparams(convert, convert_id, parameters)
@@ -384,10 +389,10 @@ class CMC(object):
 
 	# Return the latest OHLCV (Open, High, Low, Close, Volume) market values for one or more
 	# cryptocurrencies for the current UTC day. Since the current UTC day is still active these
-	# values are updated frequently. 
+	# values are updated frequently.
 	#
 	# Inputs
-	# coinID		string, one or more coin IDs for which to get data. See `map()`. (e.g. '1,4,5')
+	# coinId		string, one or more coin IDs for which to get data. See `map()`. (e.g. '1,4,5')
 	# symbol		string, one or more symbols for which to get data. (e.g. 'BTC,ETH,LTC')
 	# convert		string, optionally convert the data to a quote for up to 120 currencies. (e.g. 'BTC,USD')
 	# convert_id    string, optionally convert the data to a quote for up to 120 currencies. (e.g. '1,2781')
@@ -404,9 +409,83 @@ class CMC(object):
 
 		return data
 
-	# Placeholder: Historical OHLCV
+	# Return historical OHLCV (Open, High, Low, Close, Volume) data along with market cap for any
+	# cryptocurrency using time interval parameters. Currently daily and hourly OHLCV periods are
+	# supported.
 	#
-	# Requires paid plan.
+	# Inputs
+	# coinId		string, one or more coin IDs for which to get data. See `map()`. (e.g. '1,4,5')
+	# slug			string, cryptocurrencies by name. (e.g. 'bitcoin')
+	# symbol		string, one or more symbols for which to get data. (e.g. 'BTC,ETH,LTC')
+	# time_period   string, Unix or ISO 8601 timestamp. One OHLCV quote will be returned for every
+	# 				`time_period` between your `time_start` (exclusive) and `time_end` (inclusive).
+	# time_start	string, Unix or ISO 8601 timestamp for when to start collecting data. If not
+	#				included, will work backwards from `time_end`.
+	# time_end		string, Unix or ISO 8601 timestamp for when to end data collection. Defaults
+	#				to current time.
+	# count			int, limit the number of time periods to return results for. defines the number
+	#				of "time_period" intervals queried, not the number of results to return, and
+	#				this includes the currently active time period which is incomplete when working
+	#				backwards from current time.
+	# interval		string, optionally adjust the interval that "time_period" is sampled.
+	# convert		string, By default market quotes are returned in USD. Optionally calculate
+	#				market quotes in up to 3 fiat currencies or cryptocurrencies.
+	# convert_id	string, same as `convert` but using coinmarketcap IDs. Recommended over `convert`.
+	#
+	# WARNING: Completely untested, I don't have a paid plan.
+	def ohlcv_historical(
+		self,
+		coinId=None,
+		slug=None,
+		symbol=None,
+		time_period='daily',
+		time_start=None,
+		time_end=None,
+		count=10,
+		interval='daily',
+		convert=None,
+		convert_id=None
+	):
+
+		url = self.root_url + 'cryptocurrency/ohlcv/historical'
+
+		if not isinstance(count, int):
+			err = { 'error' : 'Count must be an integer.' }
+			return err
+
+		parameters = self._id_symbol(coinId, slug, symbol, {}, True)
+		if 'error' in parameters:
+			return parameters
+
+		if time_period == 'daily' or time_period == 'hourly':
+			parameters['time_period'] = time_period
+		else:
+			parameters['time_period'] = 'daily'
+
+		if time_start:
+			assert( type(time_start) == str )
+			parameters['time_start'] = time_start
+
+		if time_end:
+			assert( type(time_end) == str )
+			parameters['time_end'] = time_end
+
+		if count < 1:
+			count = 1
+		elif count > 10_000:
+			count = 10_000
+
+		parameters['count'] = str(count)
+
+		if interval:
+			assert( type(interval) == str )
+			parameters = self._intervals(interval, parameters, False)
+
+		parameters = self._convertparams(convert, convert_id, parameters)
+
+		data = self.__call__(url, parameters)
+
+		return data
 
 	# Placeholder: ALL EXCHANGE ENDPOINTS
 	#
@@ -427,11 +506,11 @@ class CMC(object):
 
 		parameters = {}
 		parameters = self._convertparams(convert, convert_id, parameters)
-		
+
 		data = self.__call__(url, parameters)
-		
+
 		return data
-	
+
 	# Placeholder: Historical aggregate metrics
 	#
 	# Requires paid plan.
@@ -466,18 +545,18 @@ class CMC(object):
 		elif amount > 1e9:
 			err = { 'error' : 'Amount must be less than 1e9.' }
 			return err
-		
+
 		parameters['amount'] = str(amount)
-				
+
 		if not convert and not convert_id:
 			err = { 'error' : 'Must specify a currency to convert to.' }
 			return err
-		
+
 		parameters = self._convertparams(convert, convert_id, parameters)
 
 		if time:
 			parameters['time'] = time
-		
+
 		data = self.__call__(url, parameters)
-		
+
 		return data
