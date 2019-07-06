@@ -29,17 +29,38 @@ class CMC(object):
 			data = json.loads(response.text)
 		except (ConnectionError, Timeout, TooManyRedirects) as e:
 			data = {
-				'error' : e,
+				'status' : {
+					'error_code' : 100,
+					'error_message' : e,
+				}
 			}
 
 		return data
 
+	# Error codes
+	#
+	# 100: Connection error
+	# 101: Not enough parameters specified
+	# 102: Type error
+	# 103: Value out of accepted range
+	def _error(self, code=101, message='Error happened before API call.'):
+
+		err = {
+			'status' : {
+				'error_code' : code,
+				'error_message' : message
+			},
+			'data' : 'No data'
+		}
+		return err
+
+	# Prioritizes `convert_id` over `convert`.
 	def _convertparams(self, convert=None, convert_id=None, parameters={}):
 
-		if convert:
-			parameters['convert'] = convert.replace(' ', '')
-		elif convert_id:
+		if convert_id:
 			parameters['convert_id'] = convert_id.replace(' ', '')
+		elif convert:
+			parameters['convert'] = convert.replace(' ', '')
 
 		return parameters
 
@@ -86,11 +107,11 @@ class CMC(object):
 
 		return parameters
 
+	# Prioritizes `coinId` over `slug` over `symbol`.
 	def _id_symbol(self, coinId=None, slug=None, symbol=None, parameters={}, required=True):
 
 		if required and not coinId and not slug and not symbol:
-			err = { 'error' : 'No parameters provided.' }
-			return err
+			return self._error(101, 'No parameters provided for coin ID or symbol.')
 
 		if coinId:
 			parameters['id'] = coinId.replace(' ', '')
@@ -159,7 +180,7 @@ class CMC(object):
 		url = self.root_url + 'cryptocurrency/info'
 
 		parameters = self._id_symbol(coinId, slug, symbol, {}, True)
-		if 'error' in parameters:
+		if 'status' in parameters and 'error_code' in parameters['status']:
 			return parameters
 
 		data = self.__call__(url, parameters)
@@ -168,8 +189,6 @@ class CMC(object):
 
 	# Returns listings (total supply, max supply, price, percent change, the info you would see
 	# on coinmarketcap.com) for currencies.
-	#
-	# Prioritizes `convert` over `convert_id`.
 	#
 	# Inputs
 	# start                 int, cryptocurrency by market cap to start from.
@@ -183,7 +202,23 @@ class CMC(object):
 	#                       If your sort direction is not valid, it will sort descending.
 	# cryptocurrencytype    string, types to return, can be 'all', 'coins', or 'tokens'.
 	#                       If your type is not valid, it will return all.
-	def listings(self, start=1, limit=100, convert=None, convert_id=None, sort=None, sort_dir=None, cryptocurrencytype=None):
+	def listings(
+		self,
+		start=1,
+		limit=100,
+		convert=None,
+		convert_id=None,
+		sort=None,
+		sort_dir=None,
+		cryptocurrencytype=None
+	):
+
+		url = self.root_url + 'cryptocurrency/listings/latest'
+
+		if not isinstance(start, int):
+			return self._error(102, 'Parameter `start` must be an integer.')
+		if not isinstance(limit, int):
+			return self._error(102, 'Parameter `limit` must be an integer.')
 
 		if start < 1:
 			start = 1
@@ -192,8 +227,6 @@ class CMC(object):
 			limit = 1
 		elif limit > 5000:
 			limit = 5000
-
-		url = self.root_url + 'cryptocurrency/listings/latest'
 
 		parameters = {
 			'start' : str(int(start)),
@@ -210,13 +243,32 @@ class CMC(object):
 
 	# Same as `listings()` but for a historical date.
 	#
-	# Requires paid plan.
-	#
 	# `date` is a string and must be Unix or ISO 8601 format (e.g. '2018-02-24'). Only the _date_,
 	# and not the _time_, will be considered.
-	def historical_listings(self, date, start=1, limit=100, convert=None, convert_id=None, sort=None, sort_dir=None, cryptocurrencytype=None):
+	#
+	# WARNING: Completely untested, I don't have a paid plan.
+	def historical_listings(
+		self,
+		date,
+		start=1,
+		limit=100,
+		convert=None,
+		convert_id=None,
+		sort=None,
+		sort_dir=None,
+		cryptocurrencytype=None
+	):
 
-		assert( type(date) == str )
+		url = self.root_url + 'cryptocurrency/listings/latest'
+
+		if not isinstance(date, str):
+			return self._error(102, 'Parameter `date` must be a string.')
+		if not isinstance(limit, int):
+			return self._error(102, 'Parameter `limit` must be an integer.')
+		if not isinstance(start, int):
+			return self._error(102, 'Parameter `start` must be an integer.')
+		if not isinstance(limit, int):
+			return self._error(102, 'Parameter `limit` must be an integer.')
 
 		if start < 1:
 			start = 1
@@ -226,12 +278,10 @@ class CMC(object):
 		elif limit > 5000:
 			limit = 5000
 
-		url = self.root_url + 'cryptocurrency/listings/latest'
-
 		parameters = {
 			'date' : date,
-			'start' : str(int(start)),
-			'limit' : str(int(limit)),
+			'start' : str(start),
+			'limit' : str(limit),
 		}
 
 		parameters = self._convertparams(convert, convert_id, parameters)
@@ -247,7 +297,6 @@ class CMC(object):
 	# in the same call.
 	#
 	# Prioritizes `coinId` over `slug` over `symbol`.
-	# Prioritizes `convert` over `convert_id`.
 	#
 	# Inputs
 	# coinId        string, coin ID(s). See `map()`.
@@ -260,7 +309,7 @@ class CMC(object):
 		url = self.root_url + 'cryptocurrency/quotes/latest'
 
 		parameters = self._id_symbol(coinId, slug, symbol, {}, True)
-		if 'error' in parameters:
+		if 'status' in parameters and 'error_code' in parameters['status']:
 			return parameters
 
 		parameters = self._convertparams(convert, convert_id, parameters)
@@ -301,32 +350,38 @@ class CMC(object):
 		convert_id=None
 	):
 
+		url = self.root_url + 'cryptocurrency/quotes/historical'
+
 		parameters = self._id_symbol(coinId, None, symbol, {}, True)
-		if 'error' in parameters:
+		if 'status' in parameters and 'error_code' in parameters['status']:
 			return parameters
 
 		if time_start:
-			assert( type(time_start) == str )
+			if not isinstance(time_start, str):
+				return self._error(102, 'Parameter `time_start` must be a string.')
 			parameters['time_start'] = time_start
 
 		if time_end:
-			assert( type(time_end) == str )
+			if not isinstance(time_end, str):
+				return self._error(102, 'Parameter `time_end` must be a string.')
 			parameters['time_end'] = time_end
+
+		if not isinstance(count, int):
+			return self._error(102, 'Parameter `count` must be an integer.')
 
 		if count < 1:
 			count = 1
 		elif count > 10_000:
 			count = 10_000
 
-		parameters['count'] = str(int(count))
+		parameters['count'] = str(count)
 
 		if interval:
-			assert( type(interval) == str )
+			if not isinstance(interval, str):
+				return self._error(102, 'Parameter `interval` must be a string. See documentation for valid values.')
 			parameters = self._intervals(interval, parameters, True)
 
 		parameters = self._convertparams(convert, convert_id, parameters)
-
-		url = self.root_url + 'cryptocurrency/quotes/historical'
 
 		data = self.__call__(url, parameters)
 
@@ -353,20 +408,14 @@ class CMC(object):
 
 		url = self.root_url + 'cryptocurrency/market-pairs/latest'
 
-		if not coinId and not slug and not symbol:
-			err = { 'error' : 'No parameters provided.' }
-			return err
-
 		if not isinstance(start, int):
-			err = { 'error' : 'Start must be an integer.' }
-			return err
+			return self._error(102, 'Parameter `start` must be an integer.')
 
 		if not isinstance(limit, int):
-			err = { 'error' : 'Limit must be an integer.' }
-			return err
+			return self._error(102, 'Parameter `limit` must be an integer.')
 
 		parameters = self._id_symbol(coinId, slug, symbol, {}, True)
-		if 'error' in parameters:
+		if 'status' in parameters and 'error_code' in parameters['status']:
 			return parameters
 
 		if start < 1:
@@ -403,6 +452,9 @@ class CMC(object):
 		url = self.root_url + 'cryptocurrency/ohlcv/latest'
 
 		parameters = self._id_symbol(coinId, None, symbol, {}, True)
+		if 'status' in parameters and 'error_code' in parameters['status']:
+			return parameters
+
 		parameters = self._convertparams(convert, convert_id, parameters)
 
 		data = self.__call__(url, parameters)
@@ -449,12 +501,8 @@ class CMC(object):
 
 		url = self.root_url + 'cryptocurrency/ohlcv/historical'
 
-		if not isinstance(count, int):
-			err = { 'error' : 'Count must be an integer.' }
-			return err
-
 		parameters = self._id_symbol(coinId, slug, symbol, {}, True)
-		if 'error' in parameters:
+		if 'status' in parameters and 'error_code' in parameters['status']:
 			return parameters
 
 		if time_period == 'daily' or time_period == 'hourly':
@@ -463,12 +511,17 @@ class CMC(object):
 			parameters['time_period'] = 'daily'
 
 		if time_start:
-			assert( type(time_start) == str )
+			if not isinstance(time_start, str):
+				return self._error(102, 'Parameter `time_start` must be a string.')
 			parameters['time_start'] = time_start
 
 		if time_end:
-			assert( type(time_end) == str )
+			if not isinstance(time_end, str):
+				return self._error(102, 'Parameter `time_end` must be a string.')
 			parameters['time_end'] = time_end
+
+		if not isinstance(count, int):
+			return self._error(102, 'Parameter `count` must be an integer.')
 
 		if count < 1:
 			count = 1
@@ -478,7 +531,8 @@ class CMC(object):
 		parameters['count'] = str(count)
 
 		if interval:
-			assert( type(interval) == str )
+			if not isinstance(interval, str):
+				return self._error(102, 'Parameter `interval` must be a string.')
 			parameters = self._intervals(interval, parameters, False)
 
 		parameters = self._convertparams(convert, convert_id, parameters)
@@ -494,8 +548,6 @@ class CMC(object):
 	# Get the latest quote of aggregate market metrics. Use the 'convert' option
 	# to return market values in multiple fiat and cryptocurrency conversions
 	# in the same call.
-	#
-	# Prioritizes `convert` over `convert_id`.
 	#
 	# Inputs
 	# convert       string, symbol(s) of currency to get metrics for.
@@ -519,7 +571,6 @@ class CMC(object):
 	# Paid subscribers can get a conversion from a historical date.
 	#
 	# Prioritizes `coinId` over `symbol`.
-	# Prioritizes `convert` over `convert_id`.
 	#
 	# Inputs
 	# amount        float or int, amount of base currency to convert.
@@ -533,28 +584,26 @@ class CMC(object):
 		url = self.root_url + 'tools/price-conversion'
 
 		parameters = self._id_symbol(coinId, None, symbol, {}, True)
-		if 'error' in parameters:
+		if 'status' in parameters and 'error_code' in parameters['status']:
 			return parameters
 
 		if not isinstance(amount, (int, float)):
-			err = { 'error' : 'Amount must be int or float.' }
-			return err
+			return self._error(102, 'Parameter `amount` must be a float or an integer.')
 		if amount < 1e-8:
-			err = { 'error' : 'Amount must be greater than 1e-8.' }
-			return err
+			return self._error(103, 'Parameter `amount` must be greater than 1e-8.')
 		elif amount > 1e9:
-			err = { 'error' : 'Amount must be less than 1e9.' }
-			return err
+			return self._error(103, 'Parameter `amount` must be less than 1e9.')
 
 		parameters['amount'] = str(amount)
 
 		if not convert and not convert_id:
-			err = { 'error' : 'Must specify a currency to convert to.' }
-			return err
+			return self._error(101, 'Must specify a currency to convert to.')
 
 		parameters = self._convertparams(convert, convert_id, parameters)
 
 		if time:
+			if not isinstance(time, str):
+				return self._error(102, 'Parameter `time` must be a string.')
 			parameters['time'] = time
 
 		data = self.__call__(url, parameters)
