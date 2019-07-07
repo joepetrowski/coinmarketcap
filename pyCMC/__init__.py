@@ -137,28 +137,32 @@ class CMC(object):
 	#           If `symbol` is provided, other parameters are ignored.
 	def map(self, status='active', start=1, limit=10, symbol=None):
 
-		if status != 'inactive' and status != 'active':
-			status = 'active'
-
-		if start < 1:
-			start = 1
-
-		if limit < 1:
-			limit = 1
-		elif limit > 5000:
-			limit = 5000
-
 		url = self.root_url + 'cryptocurrency/map'
 
-		parameters = {
-			'listing_status' : status,
-			'start' : str(int(start)),
-			'limit' : str(int(limit)),
-		}
-
-		# `symbol` overrides all other parameters
 		if symbol:
 			parameters = { 'symbol' : symbol.replace(' ', '') }
+		else:
+			if not isinstance(start, int):
+				return self._error(102, 'Parameter `start` must be an integer.')
+			if not isinstance(limit, int):
+				return self._error(102, 'Parameter `limit` must be an integer.')
+
+			if status != 'inactive' and status != 'active':
+				status = 'active'
+
+			if start < 1:
+				start = 1
+
+			if limit < 1:
+				limit = 1
+			elif limit > 5000:
+				limit = 5000
+
+			parameters = {
+				'listing_status' : status,
+				'start' : str(start),
+				'limit' : str(limit),
+			}
 
 		data = self.__call__(url, parameters)
 
@@ -229,8 +233,8 @@ class CMC(object):
 			limit = 5000
 
 		parameters = {
-			'start' : str(int(start)),
-			'limit' : str(int(limit)),
+			'start' : str(start),
+			'limit' : str(limit),
 		}
 
 		parameters = self._convertparams(convert, convert_id, parameters)
@@ -263,8 +267,6 @@ class CMC(object):
 
 		if not isinstance(date, str):
 			return self._error(102, 'Parameter `date` must be a string.')
-		if not isinstance(limit, int):
-			return self._error(102, 'Parameter `limit` must be an integer.')
 		if not isinstance(start, int):
 			return self._error(102, 'Parameter `start` must be an integer.')
 		if not isinstance(limit, int):
@@ -296,8 +298,6 @@ class CMC(object):
 	# option to return market values in multiple fiat and cryptocurrency conversions
 	# in the same call.
 	#
-	# Prioritizes `coinId` over `slug` over `symbol`.
-	#
 	# Inputs
 	# coinId        string, coin ID(s). See `map()`.
 	# slug          string, coin name(s) (e.g. 'bitcoin,ethereum').
@@ -320,8 +320,6 @@ class CMC(object):
 
 	# Historical quotes. A historic quote for every 'interval' period between your 'time_start'
 	# and 'time_end' will be returned.
-	#
-	# Requires paid plan.
 	#
 	# Inputs
 	# coinId    	string, coin ID(s). See `map()`.
@@ -392,8 +390,6 @@ class CMC(object):
 	# "convert" option to return market values in multiple fiat and cryptocurrency conversions in the
 	# same call.
 	#
-	# Requires paid plan.
-	#
 	# Inputs
 	# coinID		string, a cryptocurrency or fiat currency to get market pairs for. Only 1. (e.g. '1')
 	# slug			string, a cryptocurrency or fiat currency to get market pairs for. Only 1. (e.g. 'bitcoin')
@@ -410,7 +406,6 @@ class CMC(object):
 
 		if not isinstance(start, int):
 			return self._error(102, 'Parameter `start` must be an integer.')
-
 		if not isinstance(limit, int):
 			return self._error(102, 'Parameter `limit` must be an integer.')
 
